@@ -1,11 +1,14 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage, Api, Querier};
+use cosmwasm_std::{from_binary, Addr};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage, Api, Querier, BankMsg, Coin};
 use cw2::set_contract_version;
+use cw2::Cw20ReceiveMsg;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, GetCountResponse, InstantiateMsg, QueryMsg};
-use crate::state::{State, STATE};
+use crate::state::{State, STATE, ESCROWS, POOL, COLLATERALS};
+use crate::execute::{execute_escrow, execute_redeem};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ammse";
@@ -41,12 +44,13 @@ pub fn execute(
     match msg {
         ExecuteMsg::AddToEscrow { amount } => {
             // Add tokens to escrow and increase liquidity in pool
-            let mut escrow = ESCROWS.load(deps.storage, &info.sender)?;
-            escrow.funds += amount;
-            ESCROWS.save(deps.storage, &info.sender, &escrow)?;
+            let mut escrow = ESCROWS.load(deps.storage)?;
+            escrow.funds.amount += amount;
+            escrow.owner = info.sender.clone();
+            ESCROWS.save(deps.storage, &escrow)?;
 
             let mut pool = POOL.load(deps.storage)?;
-            pool.liquidity += amount;
+            pool.liquidity.amount += amount;
             POOL.save(deps.storage, &pool)?;
 
             Ok(Response::new().add_attributes(vec![
@@ -59,22 +63,24 @@ pub fn execute(
         ExecuteMsg::BorrowFromPool { amount } => {
             // Borrow tokens from pool and decrease liquidity
             let mut pool = POOL.load(deps.storage)?;
-            if pool.liquidity < amount {
-                return Err(StdError::generic_err("Not enough liquidity in pool"));
+            if pool.liquidity.amount < amount.amount {
+              //  return Err(StdError::generic_err("Not enough liquidity in pool"));  TODO :: ADD Error handling
             }
-            pool.liquidity -= amount;
+            pool.liquidity.amount -= amount;
             POOL.save(deps.storage, &pool)?;
 
             Ok(Response::new().add_message(BankMsg::Send {
-                to_address: info.sender.clone(),
-                amount: vec![Coin { denom: "token", amount }],
+                to_address: info.sender.clone().into_string(),
+                amount: vec![Coin { denom: "inj".to_string(), amount.amount }],
             }))
         }
         ExecuteMsg::AddCollateral { amount } => {
             // Add tokens as collateral
-            let mut collateral = COLLATERALS.load(deps.storage, &info.sender)?;
-            collateral.amount += amount;
-            COLLATERALS.save(deps.storage, &info.sender, &collateral)?;
+            receive_cw20(deps, _env, info, msg);
+            let mut collateral = COLLATERALS.load(deps.storage)?;
+            collateral.amount = amount;
+            collateral.owner = info.sender.clone();
+            COLLATERALS.save(deps.storage, &collateral)?;
 
             Ok(Response::new().add_attributes(vec![
                 ("action", "add_collateral"),
@@ -82,6 +88,26 @@ pub fn execute(
                 ("amount", &amount.to_string()),
             ]))
         }
+        ExecuteMsg::Redeem {} => execute_redeem(deps, _env, info.sender),
+    }
+}
+
+pub fn receive_cw20(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    cw20_msg: Cw20ReceiveMsg,
+) -> Result<Response, ContractError> {
+    match from_binary(&cw20_msg.msg) {
+        Ok(Cw20HookMsg::Escrow { time }) => execute_escrow(
+            deps,
+            env,
+            Addr::unchecked(cw20_msg.sender),
+            info.sender,
+            cw20_msg.amount,
+            time,
+        ),
+        Err(err) => Err(ContractError::Std(err)),
     }
 }
 

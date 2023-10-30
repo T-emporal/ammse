@@ -1,4 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::Coin;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -7,8 +8,11 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    Increment {},
-    Reset { count: i32 },
+    //Increment {},
+    //Reset { count: i32 },
+    AddToEscrow { amount : Coin },
+    BorrowFromPool { amount : Coin },
+    AddCollateral { amount : Coin},
 }
 
 #[cw_serde]

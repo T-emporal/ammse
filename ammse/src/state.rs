@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{Addr, Coin};
-use cw_storage_plus::{Item, Map};
+use cw_storage_plus:: Item;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct State {
@@ -11,9 +11,9 @@ pub struct State {
 }
 
 pub const STATE: Item<State> = Item::new("state");
-static ESCROWS: Item<Addr> = Item::new("escrows:");
-static POOL: Item<Pool> = Item::new("pool");
-static COLLATERALS: Item<Addr> = Item::new("collaterals:");
+pub static ESCROWS: Item<Escrow> = Item::new("escrows:");
+pub static POOL: Item<Pool> = Item::new("pool");
+pub static COLLATERALS: Item<Collateral> = Item::new("collaterals:");
 
 //pub static ASSETS: Map<Addr, Asset> = Map::new("assets");
 //
