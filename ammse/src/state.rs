@@ -14,6 +14,8 @@ pub const STATE: Item<State> = Item::new("state");
 pub static ESCROWS: Item<Escrow> = Item::new("escrows:");
 pub static POOL: Item<Pool> = Item::new("pool");
 pub static COLLATERALS: Item<Collateral> = Item::new("collaterals:");
+static VAULT: Item<Vault> = Item::new("vault");
+static LENDERS: Map<Addr, LenderInfo> = Map::new("lenders:");
 
 //pub static ASSETS: Map<Addr, Asset> = Map::new("assets");
 //
@@ -23,6 +25,21 @@ pub static COLLATERALS: Item<Collateral> = Item::new("collaterals:");
 //    pub interest: f64,           // Calculated interest for this asset.
 //}
 //
+// Represents the collective vault where all tokens are pooled together
+struct Vault {
+    total_tokens: Uint128,
+    // ... other relevant data
+}
+
+// Represents an individual lender's contribution and details
+struct LenderInfo {
+    lender: Addr,
+    amount_lent: Uint128,
+    maturity_date: u64,
+    // ... other relevant fields
+}
+
+
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Escrow {
