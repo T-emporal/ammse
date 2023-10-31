@@ -129,7 +129,7 @@ pub fn earn(
     Ok(Response::default().add_attribute("action", "earn"))
 }
 
-pub fn withdraw(
+pub fn withdraw_for_earn(
     deps: DepsMut,
     _env: Env,
     user: Addr,
