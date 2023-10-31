@@ -1,5 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Coin;
+use cosmwasm_std::{Coin, Uint128};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -38,3 +40,19 @@ pub enum HandleMsg {
     },
 }
 
+#[cw_serde]
+pub enum Cw20HookMsg {
+    Escrow { time: u64 },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct ConfigResponse {
+    pub owner: String,
+    pub token: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct EscrowResponse {
+    pub amount: Uint128,
+    pub time: u64,
+}

@@ -8,6 +8,19 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
-    // Add any other custom errors you like here.
-    // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
+
+    #[error("User has existing escrow")]
+    ExistingEscrow {},
+
+    #[error("User has no existing escrow")]
+    NoExistingEscrow {},
+
+    #[error("Escrow has not expired")]
+    NotExpired {},
+
+    #[error("Insufficent Funds")]
+    InsufficientFunds{},
+
+    #[error("Duration Not Met")]
+    DurationNotMet{},
 }

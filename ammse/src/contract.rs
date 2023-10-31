@@ -110,7 +110,16 @@ pub fn receive_cw20(
         Err(err) => Err(ContractError::Std(err)),
     }
 }
-
+// this is a helper to move the tokens, so the business logic is easy to read
+fn send_tokens(to_address: Addr, amount: Vec<Coin>, action: &str) -> Response {
+    Response::new()
+        .add_message(BankMsg::Send {
+            to_address: to_address.clone().into(),
+            amount,
+        })
+        .add_attribute("action", action)
+        .add_attribute("to", to_address)
+}
 pub mod execute {
     use super::*;
 

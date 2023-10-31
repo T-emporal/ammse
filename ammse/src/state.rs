@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, Coin};
+use cosmwasm_std::{Addr, Coin, Uint128};
 use cw_storage_plus:: Item;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -11,11 +11,12 @@ pub struct State {
 }
 
 pub const STATE: Item<State> = Item::new("state");
-pub static ESCROWS: Item<Escrow> = Item::new("escrows:");
+pub static ESCROW: Item<Escrow> = Item::new("escrows:");
 pub static POOL: Item<Pool> = Item::new("pool");
 pub static COLLATERALS: Item<Collateral> = Item::new("collaterals:");
-static VAULT: Item<Vault> = Item::new("vault");
-static LENDERS: Map<Addr, LenderInfo> = Map::new("lenders:");
+pub static VAULT: Item<Vault> = Item::new("vault");
+pub static LENDERS: Item<LenderInfo> = Item::new("lenders:");
+pub const CONFIG: Item<Config> = Item::new("config");
 
 //pub static ASSETS: Map<Addr, Asset> = Map::new("assets");
 //
@@ -26,27 +27,32 @@ static LENDERS: Map<Addr, LenderInfo> = Map::new("lenders:");
 //}
 //
 // Represents the collective vault where all tokens are pooled together
-struct Vault {
-    total_tokens: Uint128,
-    // ... other relevant data
-}
-
-// Represents an individual lender's contribution and details
-struct LenderInfo {
-    lender: Addr,
-    amount_lent: Uint128,
-    maturity_date: u64,
-    // ... other relevant fields
-}
-
-
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct Escrow {
-    pub owner: Addr,
-    pub funds: Coin,  // amount of tokens stored
+pub struct Vault {
+    pub total_tokens: Uint128,
 }
 
+// Represents an individual lender's contribution and detailsasd
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct LenderInfo {
+   pub lender: Addr,
+   pub amount_lent: Uint128,
+   pub maturity_date: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct Config {
+    pub owner: Addr,
+    pub token: Addr,
+}
+
+
+//#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+//pub struct Escrow {
+//    pub owner: Addr,
+//    pub funds: Coin,  // amount of tokens stored
+//}
+//
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Pool {
     pub liquidity: Coin,  // total tokens in the pool
@@ -66,4 +72,11 @@ pub enum ExecuteMsg {
     BorrowFromPool { amount: Coin },
     AddCollateral { amount: Coin },
     // ... you can add more actions if needed
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct Escrow {
+    pub user: Addr,
+    pub amount: Uint128,
+    pub time: u64,
 }

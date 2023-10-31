@@ -2,7 +2,7 @@ use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, Response, Uint128, 
 use cw20::Cw20ExecuteMsg;
 
 use crate::error::ContractError;
-use crate::state::{Escrow, CONFIG, ESCROW};
+use crate::state::{ESCROW, VAULT, LENDERS, CONFIG, Escrow, LenderInfo};
 
 pub fn execute_escrow(
     deps: DepsMut,
@@ -17,7 +17,7 @@ pub fn execute_escrow(
         return Err(ContractError::Unauthorized {});
     }
 
-    if ESCROW.may_load(deps.storage, &user)?.is_some() {
+    if ESCROW.may_load(deps.storage)?.is_some() {
         return Err(ContractError::ExistingEscrow {});
     }
 
@@ -27,7 +27,7 @@ pub fn execute_escrow(
         time: env.block.time.seconds() + time,
     };
 
-    ESCROW.save(deps.storage, &user, &escrow)?;
+    ESCROW.save(deps.storage, &escrow)?;
 
     Ok(Response::default().add_attribute("action", "escrow"))
 }
@@ -35,7 +35,7 @@ pub fn execute_escrow(
 pub fn execute_redeem(deps: DepsMut, env: Env, user: Addr) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    let escrow = ESCROW.may_load(deps.storage, &user)?;
+    let escrow = ESCROW.may_load(deps.storage)?;
     if escrow.is_none() {
         return Err(ContractError::NoExistingEscrow {});
     }
@@ -54,7 +54,7 @@ pub fn execute_redeem(deps: DepsMut, env: Env, user: Addr) -> Result<Response, C
         funds: vec![],
     });
 
-    ESCROW.remove(deps.storage, &user);
+    ESCROW.remove(deps.storage);
 
     Ok(Response::new()
         .add_message(msg)
@@ -79,7 +79,7 @@ pub fn lend_to_pool(
         amount_lent: amount,
         maturity_date: env.block.time.seconds() + duration,
     };
-    LENDERS.save(deps.storage, &lender, &lender_info)?;
+    LENDERS.save(deps.storage, &lender_info)?;
 
     Ok(Response::default().add_attribute("action", "lend"))
 }
@@ -90,7 +90,7 @@ pub fn release_from_pool(
     env: Env,
     lender: Addr
 ) -> Result<Response, ContractError> {
-    let lender_info = LENDERS.load(deps.storage, &lender)?;
+    let lender_info = LENDERS.load(deps.storage)?;
 
     if env.block.time.seconds() < lender_info.maturity_date {
         return Err(ContractError::DurationNotMet {});
@@ -104,7 +104,7 @@ pub fn release_from_pool(
     VAULT.save(deps.storage, &vault)?;
 
     // Remove the lender's information after releasing the tokens
-    LENDERS.remove(deps.storage, &lender);
+    LENDERS.remove(deps.storage);
 
     Ok(Response::default().add_attribute("action", "release"))
 }
