@@ -2,7 +2,7 @@ use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, Response, Uint128, 
 use cw20::Cw20ExecuteMsg;
 
 use crate::error::ContractError;
-use crate::state::{ESCROW, VAULT, LENDERS, CONFIG, Escrow, LenderInfo};
+use crate::state::{ESCROW, VAULT, LENDERS, CONFIG, Escrow, LenderInfo, EARNINGS};
 
 pub fn execute_escrow(
     deps: DepsMut,
@@ -108,3 +108,116 @@ pub fn release_from_pool(
 
     Ok(Response::default().add_attribute("action", "release"))
 }
+
+pub fn earn(
+    deps: DepsMut,
+    _env: Env,  
+    user: Addr,
+    amount: Uint128,
+) -> Result<Response, ContractError> {
+    // First, we need to add the user's tokens to the vault.
+    let mut vault = VAULT.load(deps.storage)?;
+    vault.total_tokens += amount;
+    VAULT.save(deps.storage, &vault)?;
+
+    // Then, record the user's contribution to a different mapping than the LENDERS one, since the logic is a bit different.
+    let mut user_earnings = EARNINGS.load(deps.storage)?;
+    user_earnings.amount_supplied += amount;
+    user_earnings.user = user;
+    EARNINGS.save(deps.storage, &user_earnings)?;
+
+    Ok(Response::default().add_attribute("action", "earn"))
+}
+
+pub fn withdraw(
+    deps: DepsMut,
+    _env: Env,
+    user: Addr,
+) -> Result<Response, ContractError> {
+    let user_earnings = EARNINGS.load(deps.storage)?;
+
+    // Here, compute the actual amount the user can withdraw. This can be based on various factors.
+    // TODO:    
+    let amount_to_withdraw = user_earnings.amount_supplied;
+
+    // Ensure the vault has enough funds.
+    let mut vault = VAULT.load(deps.storage)?;
+    if vault.total_tokens < amount_to_withdraw {
+        return Err(ContractError::InsufficientFunds {});
+    }
+
+    // Update the vault's total tokens.
+    vault.total_tokens -= amount_to_withdraw;
+    VAULT.save(deps.storage, &vault)?;
+
+    // Reset the user's earnings to 0.
+    EARNINGS.remove(deps.storage);
+
+    Ok(Response::default().add_attribute("action", "withdraw"))
+}
+
+
+
+
+
+/*
+#[test]
+fn test_redeem_from_escrow() {
+    let mut deps = setup_dependencies();
+    let user = mock_address("user");
+    let token = mock_address("token");
+
+    // mock initialization and previous escrow action...
+
+    // Redeem before duration should fail
+    let res = execute_redeem(deps.as_mut(), mock_env(), user.clone());
+    assert_eq!(res.err(), Some(ContractError::NotExpired {}));
+
+    // Simulate passage of time
+    let mut mock_env = mock_env();
+    mock_env.block.time = mock_env.block.time.plus_seconds(3601);  // 1 hour + 1 second
+
+    // Redeem after duration should succeed
+    let res = execute_redeem(deps.as_mut(), mock_env, user.clone()).unwrap();
+    assert_eq!(res.attributes, vec![attr("action", "redeem")]);
+}
+
+#[test]
+fn test_lend_to_pool() {
+    let mut deps = setup_dependencies();
+    let lender = mock_address("lender");
+
+    let amount = Uint128::from(100u128);
+    let duration = 3600;  // 1 hour for simplicity
+
+    let res = lend_to_pool(deps.as_mut(), mock_env(), lender.clone(), amount, duration).unwrap();
+
+    assert_eq!(res.attributes, vec![attr("action", "lend")]);
+
+    let vault = VAULT.load(&deps.storage).unwrap();
+    assert_eq!(vault.total_tokens, amount);
+
+    let lender_info = LENDERS.load(&deps.storage, &lender).unwrap();
+    assert_eq!(lender_info.amount_lent, amount);
+}
+
+#[test]
+fn test_release_from_pool() {
+    let mut deps = setup_dependencies();
+    let lender = mock_address("lender");
+
+    // mock initialization and previous lend action...
+
+    // Release before duration should fail
+    let res = release_from_pool(deps.as_mut(), mock_env(), lender.clone());
+    assert_eq!(res.err(), Some(ContractError::DurationNotMet {}));
+
+    // Simulate passage of time
+    let mut mock_env = mock_env();
+    mock_env.block.time = mock_env.block.time.plus_seconds(3601);  // 1 hour + 1 second
+
+    // Release after duration should succeed
+    let res = release_from_pool(deps.as_mut(), mock_env, lender.clone()).unwrap();
+    assert_eq!(res.attributes, vec![attr("action", "release")]);
+}
+ */

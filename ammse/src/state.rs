@@ -17,6 +17,7 @@ pub static COLLATERALS: Item<Collateral> = Item::new("collaterals:");
 pub static VAULT: Item<Vault> = Item::new("vault");
 pub static LENDERS: Item<LenderInfo> = Item::new("lenders:");
 pub const CONFIG: Item<Config> = Item::new("config");
+pub const EARNINGS: Item<Earnings> = Item::new("earnings");
 
 //pub static ASSETS: Map<Addr, Asset> = Map::new("assets");
 //
@@ -79,4 +80,12 @@ pub struct Escrow {
     pub user: Addr,
     pub amount: Uint128,
     pub time: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct Earnings {
+    pub user: Addr,            
+    pub amount_supplied: Uint128,  
+    pub last_updated: u64,    
+    
 }
