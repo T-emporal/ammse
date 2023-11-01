@@ -84,6 +84,8 @@ pub fn lend_to_pool(
     Ok(Response::default().add_attribute("action", "lend"))
 }
 
+//TODO : Borrow From Pool
+
 // Release tokens back to the lender when the duration ends
 pub fn release_from_pool(
     deps: DepsMut,

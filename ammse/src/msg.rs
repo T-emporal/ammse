@@ -2,6 +2,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use cw20::Cw20ReceiveMsg;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -15,6 +16,9 @@ pub enum ExecuteMsg {
     AddToEscrow { amount : Coin },
     BorrowFromPool { amount : Coin },
     AddCollateral { amount : Coin},
+    ReceiveForCollateral(Cw20ReceiveMsg),
+    RedeemForCollateral{},
+    LendToPool(Cw20ReceiveMsg),
 }
 
 #[cw_serde]

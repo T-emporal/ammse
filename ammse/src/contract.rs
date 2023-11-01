@@ -6,9 +6,9 @@ use cw2::set_contract_version;
 use cw2::Cw20ReceiveMsg;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, GetCountResponse, InstantiateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, GetCountResponse, InstantiateMsg, QueryMsg, Cw20HookMsg};
 use crate::state::{State, STATE, ESCROWS, POOL, COLLATERALS};
-use crate::execute::{execute_escrow, execute_redeem};
+use crate::execute::{execute_escrow, execute_redeem, lend_to_pool};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ammse";
@@ -88,7 +88,9 @@ pub fn execute(
                 ("amount", &amount.to_string()),
             ]))
         }
-        ExecuteMsg::Redeem {} => execute_redeem(deps, _env, info.sender),
+        ExecuteMsg::ReceiveForCollateral(msg) => receive_cw20(deps, _env, info, msg),
+        ExecuteMsg::RedeemForCollateral{} => execute_redeem(deps, _env, info.sender),
+        ExecuteMsg::LendToPool(msg) =>receive_cw20_to_pool(deps, _env, info, msg)
     }
 }
 
@@ -104,6 +106,24 @@ pub fn receive_cw20(
             env,
             Addr::unchecked(cw20_msg.sender),
             info.sender,
+            cw20_msg.amount,
+            time,
+        ),
+        Err(err) => Err(ContractError::Std(err)),
+    }
+}
+
+pub fn receive_cw20_to_pool(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    cw20_msg: Cw20ReceiveMsg,
+) -> Result<Response, ContractError> {
+    match from_binary(&cw20_msg.msg) {
+        Ok(Cw20HookMsg::Escrow { time }) => lend_to_pool(
+            deps,
+            env,
+            Addr::unchecked(cw20_msg.sender),
             cw20_msg.amount,
             time,
         ),
