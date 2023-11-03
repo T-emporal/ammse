@@ -1,8 +1,10 @@
+
+
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, Response, Uint128, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 
 use crate::error::ContractError;
-use crate::state::{ESCROW, VAULT, LENDERS, CONFIG, Escrow, LenderInfo, EARNINGS};
+use crate::state::{ESCROW, VAULT, LENDERS, CONFIG, Escrow, LenderInfo, EARNINGS, BorrowerInfo, BORROWERS};
 
 pub fn execute_escrow(
     deps: DepsMut,
@@ -85,6 +87,30 @@ pub fn lend_to_pool(
 }
 
 //TODO : Borrow From Pool
+pub fn borrow_from_pool(
+    deps: DepsMut,
+    env: Env,
+    borrower: Addr,
+    amount: Uint128,
+    duration: u64
+) -> Result<Response, ContractError> {
+    let mut vault = VAULT.load(deps.storage)?;
+    if vault.total_tokens < amount {
+        return Err(ContractError::InsufficientFunds {});
+    }
+    vault.total_tokens -= amount;
+    VAULT.save(deps.storage, &vault)?;
+
+    let borrower_info = BorrowerInfo {
+        borrower: borrower.clone(),
+        amount_borrowed: amount,
+        maturity_date: env.block.time.seconds() + duration,
+    };
+    BORROWERS.save(deps.storage, &borrower_info)?;
+
+    Ok(Response::default().add_attribute("action", "borrow"))
+}
+
 
 // Release tokens back to the lender when the duration ends
 pub fn release_from_pool(
