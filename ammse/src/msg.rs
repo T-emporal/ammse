@@ -19,7 +19,7 @@ pub enum ExecuteMsg {
     ReceiveForCollateral(Cw20ReceiveMsg),
     RedeemForCollateral{},
     LendToPool(Cw20ReceiveMsg),
-    
+    EarnToPool(Cw20ReceiveMsg),
 }
 
 #[cw_serde]

@@ -1,6 +1,6 @@
 
 
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, Response, Uint128, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, Response, Uint128, WasmMsg, BankMsg, Coin};
 use cw20::Cw20ExecuteMsg;
 
 use crate::error::ContractError;
@@ -137,7 +137,7 @@ pub fn release_from_pool(
     Ok(Response::default().add_attribute("action", "release"))
 }
 
-pub fn earn(
+pub fn earn_tokens_into_pool(
     deps: DepsMut,
     _env: Env,  
     user: Addr,
@@ -157,7 +157,7 @@ pub fn earn(
     Ok(Response::default().add_attribute("action", "earn"))
 }
 
-pub fn withdraw_for_earn(
+pub fn withdraw_from_pool_for_earn(
     deps: DepsMut,
     _env: Env,
     user: Addr,
@@ -181,12 +181,19 @@ pub fn withdraw_for_earn(
     // Reset the user's earnings to 0.
     EARNINGS.remove(deps.storage);
 
-    Ok(Response::default().add_attribute("action", "withdraw"))
+    Ok(Response::default().add_attribute("action", "withdraw for earn"))
 }
 
-
-
-
+// this is a helper to move the tokens, so the business logic is easy to read
+fn send_tokens(to_address: Addr, amount: Vec<Coin>, action: &str) -> Response {
+    Response::new()
+        .add_message(BankMsg::Send {
+            to_address: to_address.clone().into(),
+            amount,
+        })
+        .add_attribute("action", action)
+        .add_attribute("to", to_address)
+}
 
 /*
 #[test]
