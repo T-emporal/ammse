@@ -1,5 +1,5 @@
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize, de};
+use serde::{Deserialize, Serialize, Deserializer};
 
 use cosmwasm_std::{Addr, Coin, Uint128};
 use cw_storage_plus:: Item;
@@ -46,13 +46,6 @@ pub struct Config {
     pub token: Addr,
 }
 
-
-//#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-//pub struct Escrow {
-//    pub owner: Addr,
-//    pub funds: Coin,  // amount of tokens stored
-//}
-//
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Pool {
     pub liquidity: Coin,  // total tokens in the pool
