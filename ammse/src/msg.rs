@@ -27,6 +27,9 @@ pub enum QueryMsg {
     // GetCount returns the current count as a json-encoded number
     Config {},
     Escrow { address: String },
+    LendToPool { address: String },
+    BorrowFromPool { address: String },
+    Pool {},
 }
 
 // We define a custom struct for each query response
@@ -59,4 +62,21 @@ pub struct ConfigResponse {
 pub struct EscrowResponse {
     pub amount: Uint128,
     pub time: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct LenderPoolResponse {
+    pub amount_lent: Uint128,
+    pub maturity_date: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct BorrowerPoolResponse {
+    pub amount_borrowed: Uint128,
+    pub maturity_date: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct Pool {
+    pub liquidity: Coin,  // total tokens in the pool
 }

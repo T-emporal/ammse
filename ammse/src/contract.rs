@@ -9,7 +9,7 @@ use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, GetCountResponse, InstantiateMsg, QueryMsg, Cw20HookMsg};
 use crate::state::{State, STATE};
 use crate::execute::{execute_escrow, execute_redeem, lend_to_pool, borrow_from_pool, earn_tokens_into_pool, withdraw_from_pool_for_earn};
-use crate::query::{query_config, query_escrow};
+use crate::query::{query_config, query_escrow, query_borrow_to_pool, query_pool};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:ammse";
@@ -170,7 +170,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
         QueryMsg::Escrow { address } => {
             to_binary(&query_escrow(deps, deps.api.addr_validate(&address)?)?)
-    }
+        }
+        QueryMsg::BorrowFromPool { address } => {
+            to_binary(&query_borrow_to_pool(deps, deps.api.addr_validate(&address)?)?)   
+        }
+        QueryMsg::LendToPool { address } => {
+            to_binary(&query_borrow_to_pool(deps, deps.api.addr_validate(&address)?)?)   
+        }
+        QueryMsg::Pool {} => to_binary(&query_pool(deps)?),
 }
 }
 
