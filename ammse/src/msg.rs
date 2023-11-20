@@ -1,4 +1,4 @@
-use cosmwasm_schema::cw_serde;
+use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Coin, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -6,7 +6,7 @@ use cw20::Cw20ReceiveMsg;
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub count: i32,
+    
 }
 
 #[cw_serde]
@@ -23,12 +23,16 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
     // GetCount returns the current count as a json-encoded number
-    Config {},
+    #[returns(EscrowResponse)]
     Escrow { address: String },
+    #[returns(LenderPoolResponse)]
     LendToPool { address: String },
+    #[returns(BorrowerPoolResponse)]
     BorrowFromPool { address: String },
+    #[returns(Pool)]
     Pool {},
 }
 
@@ -50,12 +54,6 @@ pub enum HandleMsg {
 #[cw_serde]
 pub enum Cw20HookMsg {
     Escrow { time: u64 },
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct ConfigResponse {
-    pub owner: String,
-    pub token: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
