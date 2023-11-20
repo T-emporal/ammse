@@ -17,14 +17,15 @@ pub fn query_escrow(deps: Deps, user: Addr) -> StdResult<EscrowResponse> {
     if escrow.is_none()  {
         return Err(StdError::generic_err("No escrow found"));
     }
-    if escrow.unwrap().user != user {
-        return Err(StdError::generic_err("Escrow not found for user"));
-    }
+    let escrows = escrow.unwrap();
 
-    let escrow = escrow.unwrap();
+    if escrows.user != user {
+        return Err(StdError::generic_err("Escrow not found for user"));
+    }   
+        
     Ok(EscrowResponse {
-        amount: escrow.amount,
-        time: escrow.time,
+        amount: escrows.amount,
+        time: escrows.time,
     })
 }
 
@@ -35,12 +36,13 @@ pub fn query_lend_to_pool(deps: Deps, user: Addr) -> StdResult<LenderPoolRespons
     if lenderers.is_none() {
         return Err(StdError::generic_err("No Lenders found"));
     }
+    let lender = lenderers.unwrap();
 
-    if lenderers.unwrap().lender != user {
+    if lender.lender != user {
         return Err(StdError::generic_err("Lend Tokens not found for user"));
     }
 
-   let lender = lenderers.unwrap();
+   
    Ok(LenderPoolResponse {
         amount_lent: lender.amount_lent,
         maturity_date: lender.maturity_date,
@@ -54,12 +56,12 @@ pub fn query_borrow_to_pool(deps: Deps, user: Addr) -> StdResult<BorrowerPoolRes
     if borrowers.is_none() {
         return Err(StdError::generic_err("No Lenders found"));
     }
+    let borrower = borrowers.unwrap();
 
-    if borrowers.unwrap().borrower != user {
+    if borrower.borrower != user {
         return Err(StdError::generic_err("Lend Tokens not found for user"));
     }
-
-   let borrower = borrowers.unwrap();
+    
    Ok(BorrowerPoolResponse {
         amount_borrowed: borrower.amount_borrowed,
         maturity_date: borrower.maturity_date,

@@ -13,11 +13,11 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     //Increment {},
     //Reset { count: i32 },
-    AddToEscrow { amount : Coin },
-    BorrowFromPool { amount : Coin },
-    AddCollateral { amount : Coin},
+    //AddToEscrow { amount : Coin }, 
+    //AddCollateral { amount : Coin},
     ReceiveForCollateral(Cw20ReceiveMsg),
     RedeemForCollateral{},
+    BorrowFromPool ( Cw20ReceiveMsg ),
     LendToPool(Cw20ReceiveMsg),
     EarnToPool(Cw20ReceiveMsg),
 }
