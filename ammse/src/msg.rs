@@ -6,9 +6,9 @@ use cw20::Cw20ReceiveMsg;
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    pub admin: Option<String>,
-    pub base_interest_rate: Decimal,
-    pub fee_percentage: Decimal,
+    // pub admin: Option<String>,
+    // pub base_interest_rate: Decimal,
+    // pub fee_percentage: Decimal,
 }
 
 #[cw_serde]
