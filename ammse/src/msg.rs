@@ -1,12 +1,14 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Coin, Uint128};
+use cosmwasm_std::{Coin, Uint128, Decimal};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use cw20::Cw20ReceiveMsg;
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    
+    pub admin: Option<String>,
+    pub base_interest_rate: Decimal,
+    pub fee_percentage: Decimal,
 }
 
 #[cw_serde]
