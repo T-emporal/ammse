@@ -23,4 +23,9 @@ pub enum ContractError {
 
     #[error("Duration Not Met")]
     DurationNotMet{},
+    
+    #[error("Custom error: {info}")]
+    CustomError {
+        info: String,
+    },
 }

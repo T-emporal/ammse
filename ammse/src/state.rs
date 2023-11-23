@@ -10,7 +10,7 @@ pub struct State {
     pub owner: Addr,
 }
 
-pub const STATE: Item<State> = Item::new("state");
+
 pub static ESCROW: Item<Escrow> = Item::new("escrows:");
 pub static POOL: Item<Pool> = Item::new("pool");
 pub static COLLATERALS: Item<Collateral> = Item::new("collaterals:");
@@ -20,9 +20,18 @@ pub static BORROWERS: Item<BorrowerInfo> = Item::new("borrowers:");
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const EARNINGS: Item<Earnings> = Item::new("earnings");
 // Represents the collective vault where all tokens are pooled together
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq,  Eq, JsonSchema)]
 pub struct Vault {
     pub total_tokens: Uint128,
+}
+
+impl Default for Vault {
+    fn default() -> Self {
+        Vault {
+            total_tokens: Uint128::zero(),
+           
+        }
+    }
 }
 
 // Represents an individual lender's contribution and detailsasd

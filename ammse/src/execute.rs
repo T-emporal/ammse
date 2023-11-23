@@ -4,7 +4,7 @@ use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, Response, Uint128, 
 use cw20::Cw20ExecuteMsg;
 
 use crate::error::ContractError;
-use crate::state::{ESCROW, VAULT, LENDERS, CONFIG, Escrow, LenderInfo, EARNINGS, BorrowerInfo, BORROWERS};
+use crate::state::{ESCROW, VAULT, LENDERS, CONFIG, Escrow, LenderInfo, EARNINGS, BorrowerInfo, BORROWERS, Vault};
 
 pub fn execute_escrow(
     deps: DepsMut,
@@ -72,7 +72,11 @@ pub fn lend_to_pool(
     amount: Uint128,
     duration: u64
 ) -> Result<Response, ContractError> {
-    let mut vault = VAULT.load(deps.storage)?;
+    let mut vault = match VAULT.load(deps.storage) {
+        Ok(v) => v,
+        Err(_) => Vault::default(), // Use the default if not present in storage
+    };
+    
     vault.total_tokens += amount;
     VAULT.save(deps.storage, &vault)?;
 
@@ -201,8 +205,6 @@ mod tests {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{coins, from_binary};
 
-    // ... other imports and setup ...
-
     #[test]
     fn test_execute_escrow() {
         let mut deps = mock_dependencies();
@@ -246,6 +248,31 @@ mod tests {
 
         }
           
+    }
+
+    #[test]
+    fn test_successful_lend_to_pool() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let lender = Addr::unchecked("lender_address");
+        let amount = Uint128::new(500);
+        let duration = 60u64; // Duration in seconds
+
+        // Call the lend_to_pool function
+        let res = lend_to_pool(deps.as_mut(), env.clone(), lender.clone(), amount, duration).unwrap();
+
+        // Assert the response is as expected
+        assert_eq!(res.attributes, vec![attr("action", "lend")]);
+
+        // Assert the vault state is updated correctly
+        let vault = VAULT.load(deps.as_ref().storage).unwrap();
+        assert_eq!(vault.total_tokens, amount); // or `initial_vault.total_tokens + amount` if initial state is set
+
+        // Assert the lender info is saved correctly
+        let lender_info = LENDERS.load(deps.as_ref().storage).unwrap();
+        assert_eq!(lender_info.lender, lender);
+        assert_eq!(lender_info.amount_lent, amount);
+        assert_eq!(lender_info.maturity_date, env.block.time.seconds() + duration);
     }
 
 }
