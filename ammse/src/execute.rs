@@ -150,7 +150,10 @@ pub fn earn_tokens_into_pool(
     amount: Uint128,
 ) -> Result<Response, ContractError> {
     // First, we need to add the user's tokens to the vault.
-    let mut vault = VAULT.load(deps.storage)?;
+    let mut vault = match VAULT.load(deps.storage) {
+        Ok(v) => v,
+        Err(_) => Vault::default(), // Use the default if not present in storage
+    };
     vault.total_tokens += amount;
     VAULT.save(deps.storage, &vault)?;
 
@@ -203,6 +206,8 @@ fn send_tokens(to_address: Addr, amount: Vec<Coin>, action: &str) -> Response {
 
 #[cfg(test)]
 mod tests {
+    use crate::state::Earnings;
+
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{coins, from_binary, Timestamp};
@@ -409,67 +414,39 @@ mod tests {
         assert_eq!(result.unwrap_err().to_string(),"Insufficent Funds");
     }
 
+    #[test]
+    fn test_successful_earn_tokens_into_pool() {
+        let mut deps = mock_dependencies();
+
+        // Setup initial vault state
+        let initial_vault = Vault { total_tokens: Uint128::new(1000) };
+        VAULT.save(deps.as_mut().storage, &initial_vault).unwrap();
+
+        // Setup initial earnings state
+        let initial_earnings = Earnings {
+            user: Addr::unchecked("some_user"),
+            amount_supplied: Uint128::new(200),
+            last_updated: 1,
+        };
+        EARNINGS.save(deps.as_mut().storage, &initial_earnings).unwrap();
+
+        let user = Addr::unchecked("new_user");
+        let amount = Uint128::new(300);
+
+        // Call the earn_tokens_into_pool function
+        let res = earn_tokens_into_pool(deps.as_mut(), mock_env(), user.clone(), amount).unwrap();
+
+        // Assert the response
+        assert_eq!(res.attributes, vec![attr("action", "earn")]);
+
+        // Assert the vault state is updated correctly
+        let vault = VAULT.load(deps.as_ref().storage).unwrap();
+        assert_eq!(vault.total_tokens, Uint128::new(1300)); // 1000 + 300
+
+        // Assert the user earnings is updated correctly
+        let user_earnings = EARNINGS.load(deps.as_ref().storage).unwrap();
+        assert_eq!(user_earnings.user, user);
+        assert_eq!(user_earnings.amount_supplied, Uint128::new(500)); // 200 + 300
+    }
+
 }
-
-
-/*
-#[test]
-fn test_redeem_from_escrow() {
-    let mut deps = setup_dependencies();
-    let user = mock_address("user");
-    let token = mock_address("token");
-
-    // mock initialization and previous escrow action...
-
-    // Redeem before duration should fail
-    let res = execute_redeem(deps.as_mut(), mock_env(), user.clone());
-    assert_eq!(res.err(), Some(ContractError::NotExpired {}));
-
-    // Simulate passage of time
-    let mut mock_env = mock_env();
-    mock_env.block.time = mock_env.block.time.plus_seconds(3601);  // 1 hour + 1 second
-
-    // Redeem after duration should succeed
-    let res = execute_redeem(deps.as_mut(), mock_env, user.clone()).unwrap();
-    assert_eq!(res.attributes, vec![attr("action", "redeem")]);
-}
-
-#[test]
-fn test_lend_to_pool() {
-    let mut deps = setup_dependencies();
-    let lender = mock_address("lender");
-
-    let amount = Uint128::from(100u128);
-    let duration = 3600;  // 1 hour for simplicity
-
-    let res = lend_to_pool(deps.as_mut(), mock_env(), lender.clone(), amount, duration).unwrap();
-
-    assert_eq!(res.attributes, vec![attr("action", "lend")]);
-
-    let vault = VAULT.load(&deps.storage).unwrap();
-    assert_eq!(vault.total_tokens, amount);
-
-    let lender_info = LENDERS.load(&deps.storage, &lender).unwrap();
-    assert_eq!(lender_info.amount_lent, amount);
-}
-
-#[test]
-fn test_release_from_pool() {
-    let mut deps = setup_dependencies();
-    let lender = mock_address("lender");
-
-    // mock initialization and previous lend action...
-
-    // Release before duration should fail
-    let res = release_from_pool(deps.as_mut(), mock_env(), lender.clone());
-    assert_eq!(res.err(), Some(ContractError::DurationNotMet {}));
-
-    // Simulate passage of time
-    let mut mock_env = mock_env();
-    mock_env.block.time = mock_env.block.time.plus_seconds(3601);  // 1 hour + 1 second
-
-    // Release after duration should succeed
-    let res = release_from_pool(deps.as_mut(), mock_env, lender.clone()).unwrap();
-    assert_eq!(res.attributes, vec![attr("action", "release")]);
-}
- */
