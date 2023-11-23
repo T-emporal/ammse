@@ -205,7 +205,7 @@ fn send_tokens(to_address: Addr, amount: Vec<Coin>, action: &str) -> Response {
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary};
+    use cosmwasm_std::{coins, from_binary, Timestamp};
 
     #[test]
     fn test_execute_escrow() {
@@ -325,6 +325,88 @@ mod tests {
 
         // Check for InsufficientFunds error
         assert!(matches!(result, Err(ContractError::InsufficientFunds {})));
+    }
+
+    #[test]
+    fn test_successful_release_from_pool() {
+        let mut deps = mock_dependencies();
+
+        // Setup lender info with a past maturity date
+        let lender_info = LenderInfo {
+            lender: Addr::unchecked("lender_address"),
+            amount_lent: Uint128::new(500),
+            maturity_date: 1, // Past date
+        };
+        LENDERS.save(deps.as_mut().storage, &lender_info).unwrap();
+
+        // Setup initial vault state
+        let initial_vault = Vault { total_tokens: Uint128::new(1000) };
+        VAULT.save(deps.as_mut().storage, &initial_vault).unwrap();
+
+        let mut env = mock_env();
+        env.block.time = Timestamp::from_seconds(2); // Current time after maturity date
+
+        // Call the release_from_pool function
+        let res = release_from_pool(deps.as_mut(), env, lender_info.lender.clone()).unwrap();
+
+        // Assert the response and storage updates
+        assert_eq!(res.attributes, vec![attr("action", "release")]);
+
+        let vault = VAULT.load(deps.as_ref().storage).unwrap();
+        assert_eq!(vault.total_tokens, Uint128::new(500)); // 1000 - 500
+
+        // Check if lender's info is removed
+        assert!(LENDERS.load(deps.as_ref().storage).is_err());
+    }
+
+    #[test]
+    fn test_release_attempt_before_maturity() {
+        let mut deps = mock_dependencies();
+        
+        let lender_info = LenderInfo {
+            lender: Addr::unchecked("lender_address"),
+            amount_lent: Uint128::new(500),
+            maturity_date: 2, // Past date
+        };
+        LENDERS.save(deps.as_mut().storage, &lender_info).unwrap();
+
+        // Setup initial vault state
+        let initial_vault = Vault { total_tokens: Uint128::new(1000) };
+        VAULT.save(deps.as_mut().storage, &initial_vault).unwrap();
+
+        let mut env = mock_env();
+        env.block.time = Timestamp::from_seconds(1); // Before the maturity date
+
+        // Attempt to release funds before maturity
+        let result = release_from_pool(deps.as_mut(), env, lender_info.lender);
+
+        // Check for DurationNotMet error
+        assert_eq!(result.unwrap_err().to_string(),"Duration Not Met");
+    }
+
+    #[test]
+    fn test_insufficient_funds_release_from_pool() {
+        let mut deps = mock_dependencies();
+        
+        let lender_info = LenderInfo {
+            lender: Addr::unchecked("lender_address"),
+            amount_lent: Uint128::new(500),
+            maturity_date: 1, // Past date
+        };
+        LENDERS.save(deps.as_mut().storage, &lender_info).unwrap();
+
+        // Setup vault with insufficient funds
+        let initial_vault = Vault { total_tokens: Uint128::new(300) };
+        VAULT.save(deps.as_mut().storage, &initial_vault).unwrap();
+
+        let mut env = mock_env();
+        env.block.time = Timestamp::from_seconds(2); // After the maturity date
+
+        // Attempt to release more funds than available
+        let result = release_from_pool(deps.as_mut(), env, lender_info.lender);
+
+        // Check for InsufficientFunds error
+        assert_eq!(result.unwrap_err().to_string(),"Insufficent Funds");
     }
 
 }
