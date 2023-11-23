@@ -1,5 +1,3 @@
-
-
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, Response, Uint128, WasmMsg, BankMsg, Coin, attr};
 use cw20::Cw20ExecuteMsg;
 
@@ -206,7 +204,7 @@ fn send_tokens(to_address: Addr, amount: Vec<Coin>, action: &str) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use crate::state::Earnings;
+    use crate::state::{Earnings, Config};
 
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
@@ -447,6 +445,137 @@ mod tests {
         let user_earnings = EARNINGS.load(deps.as_ref().storage).unwrap();
         assert_eq!(user_earnings.user, user);
         assert_eq!(user_earnings.amount_supplied, Uint128::new(500)); // 200 + 300
+    }
+
+    #[test]
+    fn test_successful_withdraw_from_pool_for_earn() {
+        let mut deps = mock_dependencies();
+
+        // Setup user earnings and vault
+        let user_earnings = Earnings {
+            user: Addr::unchecked("user_address"),
+            amount_supplied: Uint128::new(500),
+            last_updated: 1,
+        };
+        EARNINGS.save(deps.as_mut().storage, &user_earnings).unwrap();
+
+        let initial_vault = Vault { total_tokens: Uint128::new(1000) };
+        VAULT.save(deps.as_mut().storage, &initial_vault).unwrap();
+
+        // Call the withdraw_from_pool_for_earn function
+        let res = withdraw_from_pool_for_earn(deps.as_mut(), mock_env(), user_earnings.user.clone()).unwrap();
+
+        // Assert the response
+        assert_eq!(res.attributes, vec![attr("action", "withdraw for earn")]);
+
+        // Assert the vault state is updated correctly
+        let vault = VAULT.load(deps.as_ref().storage).unwrap();
+        assert_eq!(vault.total_tokens, Uint128::new(500)); // 1000 - 500
+
+        // Assert the user earnings is reset
+        assert!(EARNINGS.load(deps.as_ref().storage).is_err()); // Should be removed
+    }
+
+    #[test]
+    fn test_insufficient_funds_withdraw_from_pool_for_earn() {
+        let mut deps = mock_dependencies();
+
+        // Setup user earnings and insufficient vault funds
+        let user_earnings = Earnings {
+            user: Addr::unchecked("user_address"),
+            amount_supplied: Uint128::new(600),
+            last_updated: 1,
+        };
+        EARNINGS.save(deps.as_mut().storage, &user_earnings).unwrap();
+
+        let initial_vault = Vault { total_tokens: Uint128::new(500) }; // Less than amount_supplied
+        VAULT.save(deps.as_mut().storage, &initial_vault).unwrap();
+
+        // Call the withdraw_from_pool_for_earn function
+        let result = withdraw_from_pool_for_earn(deps.as_mut(), mock_env(), user_earnings.user);
+
+        // Check for InsufficientFunds error
+        assert!(matches!(result, Err(ContractError::InsufficientFunds {})));
+    }
+
+    #[test]
+    fn test_successful_execute_redeem() {
+        let mut deps = mock_dependencies();
+
+        // Setup escrow and config
+        let escrow = Escrow {
+            user: Addr::unchecked("user_address"),
+            amount: Uint128::new(500),
+            time: 1, // Past time
+        };
+        ESCROW.save(deps.as_mut().storage, &escrow).unwrap();
+
+        let config = Config {
+            owner : Addr::unchecked("input"),
+            token: Addr::unchecked("token_address"),
+           
+        };
+        CONFIG.save(deps.as_mut().storage, &config).unwrap();
+
+        let mut env = mock_env();
+        env.block.time = Timestamp::from_seconds(2); // Current time after escrow time
+
+        // Call the execute_redeem function
+        let res = execute_redeem(deps.as_mut(), env, escrow.user.clone()).unwrap();
+
+        // Assert the response
+        assert_eq!(res.messages.len(), 1); // Should have one message
+        assert_eq!(res.attributes, vec![attr("action", "redeem")]);
+
+        // Assert the escrow is removed
+        assert!(ESCROW.may_load(deps.as_ref().storage).is_ok());
+    }
+
+    #[test]
+    fn test_no_existing_escrow_execute_redeem() {
+        let mut deps = mock_dependencies();
+
+        let config = Config {
+            owner : Addr::unchecked("input"),
+            token: Addr::unchecked("token_address"),
+           
+        };
+        CONFIG.save(deps.as_mut().storage, &config).unwrap();
+
+        // Call the execute_redeem function without setting up escrow
+        let result = execute_redeem(deps.as_mut(), mock_env(), Addr::unchecked("user_address"));
+
+        // Check for NoExistingEscrow error
+        assert!(matches!(result, Err(ContractError::NoExistingEscrow {})));
+    }
+
+    #[test]
+    fn test_not_expired_execute_redeem() {
+        let mut deps = mock_dependencies();
+
+        let config = Config {
+            owner : Addr::unchecked("input"),
+            token: Addr::unchecked("token_address"),
+           
+        };
+        CONFIG.save(deps.as_mut().storage, &config).unwrap();
+
+        // Setup escrow with future time
+        let escrow = Escrow {
+            user: Addr::unchecked("user_address"),
+            amount: Uint128::new(500),
+            time: 10, // Future time
+        };
+        ESCROW.save(deps.as_mut().storage, &escrow).unwrap();
+
+        let mut env = mock_env();
+        env.block.time = Timestamp::from_seconds(2); // Before the escrow time
+
+        // Attempt to redeem before time
+        let result = execute_redeem(deps.as_mut(), env, escrow.user);
+
+        // Check for NotExpired error
+        assert!(matches!(result, Err(ContractError::NotExpired {})));
     }
 
 }
