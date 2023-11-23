@@ -24,7 +24,8 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
  
-    Ok(Response::new().add_attribute("method", "instantiate"))
+    Ok(Response::new().add_attribute("method", "instantiate")
+                      .add_attribute("owner", info.sender))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -183,4 +184,20 @@ pub mod query {
 
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+
+    use super::*;
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cosmwasm_std::{coins, from_binary};
+    #[test]
+    fn proper_initialization() {
+        let mut deps = mock_dependencies();
+        let info = mock_info("creator", &coins(1000, "BTC"));
+        let msg = InstantiateMsg {  };
+        // we can just call .unwrap() to assert this was a success
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+    }
+
+}

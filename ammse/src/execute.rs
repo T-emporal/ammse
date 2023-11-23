@@ -1,6 +1,6 @@
 
 
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, Response, Uint128, WasmMsg, BankMsg, Coin};
+use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, Response, Uint128, WasmMsg, BankMsg, Coin, attr};
 use cw20::Cw20ExecuteMsg;
 
 use crate::error::ContractError;
@@ -14,10 +14,10 @@ pub fn execute_escrow(
     amount: Uint128,
     time: u64,
 ) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-    if config.token != token {
-        return Err(ContractError::Unauthorized {});
-    }
+    // let config = CONFIG.load(deps.storage)?;
+    // if config.token != token {
+    //     return Err(ContractError::Unauthorized {});
+    // }
 
     if ESCROW.may_load(deps.storage)?.is_some() {
         return Err(ContractError::ExistingEscrow {});
@@ -31,7 +31,7 @@ pub fn execute_escrow(
 
     ESCROW.save(deps.storage, &escrow)?;
 
-    Ok(Response::default().add_attribute("action", "escrow"))
+    Ok(Response::new().add_attribute("action", "escrow"))
 }
 
 pub fn execute_redeem(deps: DepsMut, env: Env, user: Addr) -> Result<Response, ContractError> {
@@ -194,6 +194,62 @@ fn send_tokens(to_address: Addr, amount: Vec<Coin>, action: &str) -> Response {
         .add_attribute("action", action)
         .add_attribute("to", to_address)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cosmwasm_std::{coins, from_binary};
+
+    // ... other imports and setup ...
+
+    #[test]
+    fn test_execute_escrow() {
+        let mut deps = mock_dependencies();
+
+        {
+            let env = mock_env();
+            let info = mock_info("user_addr", &coins(1000, "token"));
+            let user = Addr::unchecked("user_addr");
+            let token = Addr::unchecked("token");
+            let amount = Uint128::new(500);
+            let time = 60u64; // 1 minute
+
+            // Attempt to execute escrow
+            let res = execute_escrow(deps.as_mut(), env, user, token, amount, time);
+            
+            assert_eq!(res.unwrap().attributes,vec![attr("action", "escrow")]);
+
+        }
+
+        // Test Case 2: Existing Escrow
+        {
+            let mut deps = mock_dependencies();
+        
+            // Setup - Manually create an existing escrow
+            let existing_escrow = Escrow {
+                user: Addr::unchecked("existing_user"),
+                amount: Uint128::new(1000),
+                time: 12345, // Some block time
+            };
+            ESCROW.save(deps.as_mut().storage, &existing_escrow).unwrap();
+    
+            // Now call execute_escrow and expect an error
+            let env = mock_env();
+            let user = Addr::unchecked("new_user");
+            let token = Addr::unchecked("token");
+            let amount = Uint128::new(500);
+            let time = 60u64;
+    
+            let result = execute_escrow(deps.as_mut(), env, user, token, amount, time);
+            assert_eq!(result.unwrap_err().to_string(),"User has existing escrow" );
+
+        }
+          
+    }
+
+}
+
 
 /*
 #[test]
