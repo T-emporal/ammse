@@ -90,7 +90,6 @@ pub fn lend_to_pool(
     Ok(Response::default().add_attribute("action", "lend"))
 }
 
-//TODO : Borrow From Pool
 pub fn borrow_from_pool(
     deps: DepsMut,
     env: Env,
@@ -98,7 +97,10 @@ pub fn borrow_from_pool(
     amount: Uint128,
     duration: u64
 ) -> Result<Response, ContractError> {
-    let mut vault = VAULT.load(deps.storage)?;
+    let mut vault = match VAULT.load(deps.storage) {
+        Ok(v) => v,
+        Err(_) => Vault::default(), // Use the default if not present in storage
+    };
     if vault.total_tokens < amount {
         return Err(ContractError::InsufficientFunds {});
     }
@@ -273,6 +275,56 @@ mod tests {
         assert_eq!(lender_info.lender, lender);
         assert_eq!(lender_info.amount_lent, amount);
         assert_eq!(lender_info.maturity_date, env.block.time.seconds() + duration);
+    }
+
+    #[test]
+    fn test_successful_borrow_from_pool() {
+        let mut deps = mock_dependencies();
+
+        // Setup initial vault state
+        let initial_vault = Vault { total_tokens: Uint128::new(1000) };
+        VAULT.save(deps.as_mut().storage, &initial_vault).unwrap();
+
+        let env = mock_env();
+        let borrower = Addr::unchecked("borrower_address");
+        let amount = Uint128::new(500);
+        let duration = 60u64; // Duration in seconds
+
+        // Call the borrow_from_pool function
+        let res = borrow_from_pool(deps.as_mut(), env.clone(), borrower.clone(), amount, duration).unwrap();
+
+        // Assert the response is as expected
+        assert_eq!(res.attributes, vec![attr("action", "borrow")]);
+
+        // Assert the vault state is updated correctly
+        let vault = VAULT.load(deps.as_ref().storage).unwrap();
+        assert_eq!(vault.total_tokens, Uint128::new(500)); // 1000 - 500
+
+        // Assert the borrower info is saved correctly
+        let borrower_info = BORROWERS.load(deps.as_ref().storage).unwrap();
+        assert_eq!(borrower_info.borrower, borrower);
+        assert_eq!(borrower_info.amount_borrowed, amount);
+        assert_eq!(borrower_info.maturity_date, env.block.time.seconds() + duration);
+    }
+
+    #[test]
+    fn test_insufficient_funds_borrow_from_pool() {
+        let mut deps = mock_dependencies();
+
+        // Setup initial vault state with insufficient funds
+        let initial_vault = Vault { total_tokens: Uint128::new(300) };
+        VAULT.save(deps.as_mut().storage, &initial_vault).unwrap();
+
+        let env = mock_env();
+        let borrower = Addr::unchecked("borrower_address");
+        let amount = Uint128::new(500); // More than what's in the vault
+        let duration = 60u64;
+
+        // Call the borrow_from_pool function
+        let result = borrow_from_pool(deps.as_mut(), env, borrower, amount, duration);
+
+        // Check for InsufficientFunds error
+        assert!(matches!(result, Err(ContractError::InsufficientFunds {})));
     }
 
 }
