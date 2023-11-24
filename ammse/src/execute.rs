@@ -578,4 +578,29 @@ mod tests {
         assert!(matches!(result, Err(ContractError::NotExpired {})));
     }
 
+    #[test]
+    fn test_send_tokens() {
+        let to_address = Addr::unchecked("recipient_address");
+        let amount = coins(100, "token");
+        let action = "test_action";
+
+        // Call the send_tokens function
+        let response = send_tokens(to_address.clone(), amount.clone(), action);
+
+        // Check the message in the response
+        assert_eq!(response.messages.len(), 1);
+        match &response.messages[0].msg {
+            CosmosMsg::Bank(BankMsg::Send { to_address: msg_to_address, amount: msg_amount }) => {
+                assert_eq!(msg_to_address, &to_address);
+                assert_eq!(msg_amount, &amount);
+            },
+            _ => panic!("Unexpected message type"),
+        }
+
+        // Check the attributes
+        assert_eq!(response.attributes, vec![
+            attr("action", action),
+            attr("to", to_address.as_str()),
+        ]);
+    }
 }

@@ -38,21 +38,6 @@ pub enum QueryMsg {
     Pool {},
 }
 
-// We define a custom struct for each query response
-#[cw_serde]
-pub struct GetCountResponse {
-    pub count: i32,
-}
-
-pub enum HandleMsg {
-    Lend {
-        unit: f64,
-    },
-    Borrow {
-        unit: f64,
-    },
-}
-
 #[cw_serde]
 pub enum Cw20HookMsg {
     Escrow { time: u64 },

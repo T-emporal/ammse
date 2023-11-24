@@ -6,7 +6,7 @@ use cw2::set_contract_version;
 use cw20::Cw20ReceiveMsg;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, GetCountResponse, InstantiateMsg, QueryMsg, Cw20HookMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, Cw20HookMsg};
 use crate::execute::{execute_escrow, execute_redeem, lend_to_pool, borrow_from_pool, earn_tokens_into_pool, withdraw_from_pool_for_earn};
 use crate::query::{ query_escrow, query_borrow_to_pool, query_pool};
 
