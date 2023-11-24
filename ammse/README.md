@@ -10,6 +10,19 @@ This repository contains contracts for Temporal's **Automated Market Maker**. Th
 - You can install **Rust** from https://www.rust-lang.org/tools/install
 - You can install **Dcoker** from https://docs.docker.com/get-docker/
 
+## System Design 
+
+![AMMMech](https://github.com/T-emporal/ammse/assets/41021590/58e67b70-dcf0-4e40-9651-93986ad4ffae)
+
+## High Level Design of contracts 
+
+![HighLevelDesign](https://github.com/T-emporal/ammse/assets/41021590/e6a7a979-92a5-4290-961a-7fee13a0931f)
+
+-	The Lender sends the Token in the Lending Pool
+-	A borrower Requests the token from the Pool
+-	A borrower repays the loan to the pool, Includes the Interest tokens
+-	The Pool returns the Token to the Lender after aggreged upon lending period
+
 ## Setup
 clone this repository
 ```
