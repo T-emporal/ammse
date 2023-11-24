@@ -1,6 +1,5 @@
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, DepsMut, Env, Response, Uint128, WasmMsg, BankMsg, Coin, attr};
 use cw20::Cw20ExecuteMsg;
-
 use crate::error::ContractError;
 use crate::state::{ESCROW, VAULT, LENDERS, CONFIG, Escrow, LenderInfo, EARNINGS, BorrowerInfo, BORROWERS, Vault};
 
@@ -202,10 +201,10 @@ fn send_tokens(to_address: Addr, amount: Vec<Coin>, action: &str) -> Response {
         .add_attribute("to", to_address)
 }
 
-#[cfg(test)]
+
+
 mod tests {
     use crate::state::{Earnings, Config};
-
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{coins, from_binary, Timestamp};
@@ -576,6 +575,32 @@ mod tests {
 
         // Check for NotExpired error
         assert!(matches!(result, Err(ContractError::NotExpired {})));
+    }
+
+    #[test]
+    fn test_send_tokens() {
+        let to_address = Addr::unchecked("recipient_address");
+        let amount = coins(100, "token");
+        let action = "test_action";
+
+        // Call the send_tokens function
+        let response = send_tokens(to_address.clone(), amount.clone(), action);
+
+        // Check the message in the response
+        assert_eq!(response.messages.len(), 1);
+        match &response.messages[0].msg {
+            CosmosMsg::Bank(BankMsg::Send { to_address: msg_to_address, amount: msg_amount }) => {
+                assert_eq!(msg_to_address, &to_address);
+                assert_eq!(msg_amount, &amount);
+            },
+            _ => panic!("Unexpected message type"),
+        }
+
+        // Check the attributes
+        assert_eq!(response.attributes, vec![
+            attr("action", action),
+            attr("to", to_address.as_str()),
+        ]);
     }
 
 }

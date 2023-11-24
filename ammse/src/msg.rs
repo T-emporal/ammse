@@ -13,8 +13,6 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    //Increment {},
-    //Reset { count: i32 },
     //AddToEscrow { amount : Coin }, 
     //AddCollateral { amount : Coin},
     ReceiveForCollateral(Cw20ReceiveMsg),
@@ -44,15 +42,6 @@ pub struct GetCountResponse {
     pub count: i32,
 }
 
-pub enum HandleMsg {
-    Lend {
-        unit: f64,
-    },
-    Borrow {
-        unit: f64,
-    },
-}
-
 #[cw_serde]
 pub enum Cw20HookMsg {
     Escrow { time: u64 },
@@ -78,5 +67,5 @@ pub struct BorrowerPoolResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Pool {
-    pub liquidity: Coin,  // total tokens in the pool
+    pub liquidity: Coin, 
 }

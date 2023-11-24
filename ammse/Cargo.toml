@@ -1,7 +1,7 @@
 [package]
 name = "ammse"
 version = "0.1.0"
-authors = ["shawayush <ayushshaw456@gmail.com>"]
+authors = ["shawayush <ayushshaw456@gmail.com>/<ayush@temporal.exchange>"]
 edition = "2021"
 
 exclude = [

@@ -1,5 +1,4 @@
 use cosmwasm_std::{Addr, Deps, StdError, StdResult};
-
 use crate::msg::{ EscrowResponse, LenderPoolResponse, BorrowerPoolResponse, Pool};
 use crate::state::{CONFIG, ESCROW, LENDERS, BORROWERS, POOL};
 
