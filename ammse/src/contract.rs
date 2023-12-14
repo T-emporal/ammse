@@ -10,6 +10,8 @@ use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, Cw20HookMsg};
 use crate::execute::{execute_escrow, execute_redeem, lend_to_pool, borrow_from_pool, earn_tokens_into_pool, withdraw_from_pool_for_earn};
 use crate::query::{ query_escrow, query_borrow_to_pool, query_pool};
 
+use self::execute::{receive_cw20, receive_cw20_to_pool, borrow_cw20_from_pool, earn_to_pool};
+
 // version info for migration info
 const CONTRACT_NAME: &str = "Temporal AMM Contracts";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -40,96 +42,128 @@ pub fn execute(
         ExecuteMsg::LendToPool(msg) =>receive_cw20_to_pool(deps, _env, info, msg),
         ExecuteMsg::BorrowFromPool(msg) =>borrow_cw20_from_pool(deps, _env, info, msg),
         ExecuteMsg::EarnToPool(msg) =>earn_to_pool(deps, _env, info, msg),
+        ExecuteMsg::Increment {} => execute::increment(deps),
+        ExecuteMsg::Reset { count } => execute::reset(deps, info, count),
+        
     }
 }
 
-pub fn receive_cw20(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    cw20_msg: Cw20ReceiveMsg,
-) -> Result<Response, ContractError> {
-    match from_binary(&cw20_msg.msg) {
-        Ok(Cw20HookMsg::Escrow { time }) => execute_escrow(
-            deps,
-            env,
-            Addr::unchecked(cw20_msg.sender),
-            info.sender,
-            cw20_msg.amount,
-            time,
-        ),
-        Err(err) => Err(ContractError::Std(err)),
-    }
-}
+pub mod execute {
+    use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, from_binary, Addr};
+    use cw20::Cw20ReceiveMsg;
 
-pub fn receive_cw20_to_pool(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    cw20_msg: Cw20ReceiveMsg,
-) -> Result<Response, ContractError> {
-    match from_binary(&cw20_msg.msg) {
-        Ok(Cw20HookMsg::Escrow { time }) => lend_to_pool(
-            deps,
-            env,
-            Addr::unchecked(cw20_msg.sender),
-            cw20_msg.amount,
-            time,
-        ),
-        Err(err) => Err(ContractError::Std(err)),
-    }
-}
+    use crate::{ContractError, msg::Cw20HookMsg, execute::{execute_escrow, lend_to_pool, borrow_from_pool, earn_tokens_into_pool, withdraw_from_pool_for_earn}, state::STATE};
 
-pub fn borrow_cw20_from_pool(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    cw20_msg: Cw20ReceiveMsg,
-) -> Result<Response, ContractError> {
-    match from_binary(&cw20_msg.msg) {
-        Ok(Cw20HookMsg::Escrow { time }) => borrow_from_pool(
-            deps,
-            env,
-            Addr::unchecked(cw20_msg.sender),
-            cw20_msg.amount,
-            time,
-        ),
-        Err(err) => Err(ContractError::Std(err)),
-    }
-}
+    pub fn increment(deps: DepsMut) -> Result<Response, ContractError> {
+        STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
+            state.count += 1;
+            Ok(state)
+        })?;
 
-pub fn earn_to_pool(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    cw20_msg: Cw20ReceiveMsg,
-) -> Result<Response, ContractError> {
-    match from_binary(&cw20_msg.msg) {
-        Ok(Cw20HookMsg::Escrow { time }) => earn_tokens_into_pool(
-            deps,
-            env,
-            Addr::unchecked(cw20_msg.sender),
-            cw20_msg.amount,
-        ),
-        Err(err) => Err(ContractError::Std(err)),
+        Ok(Response::new().add_attribute("action", "increment"))
     }
-}
 
-//function to release tokens from withdraw from earn
-pub fn withdraw_for_earn(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    cw20_msg: Cw20ReceiveMsg,
-) -> Result<Response, ContractError> {
-    match from_binary(&cw20_msg.msg) {
-        Ok(Cw20HookMsg::Escrow { time }) =>withdraw_from_pool_for_earn (
-            deps,
-            env,
-            Addr::unchecked(cw20_msg.sender),
-        ),
-        Err(err) => Err(ContractError::Std(err)),
+    pub fn reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Response, ContractError> {
+        STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
+            if info.sender != state.owner {
+                return Err(ContractError::Unauthorized {});
+            }
+            state.count = count;
+            Ok(state)
+        })?;
+        Ok(Response::new().add_attribute("action", "reset"))
     }
+
+        pub fn receive_cw20(
+            deps: DepsMut,
+            env: Env,
+            info: MessageInfo,
+            cw20_msg: Cw20ReceiveMsg,
+        ) -> Result<Response, ContractError> {
+            match from_binary(&cw20_msg.msg) {
+                Ok(Cw20HookMsg::Escrow { time }) => execute_escrow(
+                    deps,
+                    env,
+                    Addr::unchecked(cw20_msg.sender),
+                    info.sender,
+                    cw20_msg.amount,
+                    time,
+                ),
+                Err(err) => Err(ContractError::Std(err)),
+            }
+        }
+
+        pub fn receive_cw20_to_pool(
+            deps: DepsMut,
+            env: Env,
+            info: MessageInfo,
+            cw20_msg: Cw20ReceiveMsg,
+        ) -> Result<Response, ContractError> {
+            match from_binary(&cw20_msg.msg) {
+                Ok(Cw20HookMsg::Escrow { time }) => lend_to_pool(
+                    deps,
+                    env,
+                    Addr::unchecked(cw20_msg.sender),
+                    cw20_msg.amount,
+                    time,
+                ),
+                Err(err) => Err(ContractError::Std(err)),
+            }
+        }
+
+        pub fn borrow_cw20_from_pool(
+            deps: DepsMut,
+            env: Env,
+            info: MessageInfo,
+            cw20_msg: Cw20ReceiveMsg,
+        ) -> Result<Response, ContractError> {
+            match from_binary(&cw20_msg.msg) {
+                Ok(Cw20HookMsg::Escrow { time }) => borrow_from_pool(
+                    deps,
+                    env,
+                    Addr::unchecked(cw20_msg.sender),
+                    cw20_msg.amount,
+                    time,
+                ),
+                Err(err) => Err(ContractError::Std(err)),
+            }
+        }
+
+        pub fn earn_to_pool(
+            deps: DepsMut,
+            env: Env,
+            info: MessageInfo,
+            cw20_msg: Cw20ReceiveMsg,
+        ) -> Result<Response, ContractError> {
+            match from_binary(&cw20_msg.msg) {
+                Ok(Cw20HookMsg::Escrow { time }) => earn_tokens_into_pool(
+                    deps,
+                    env,
+                    Addr::unchecked(cw20_msg.sender),
+                    cw20_msg.amount,
+                ),
+                Err(err) => Err(ContractError::Std(err)),
+            }
+        }
+
+        //function to release tokens from withdraw from earn
+        pub fn withdraw_for_earn(
+            deps: DepsMut,
+            env: Env,
+            info: MessageInfo,
+            cw20_msg: Cw20ReceiveMsg,
+        ) -> Result<Response, ContractError> {
+            match from_binary(&cw20_msg.msg) {
+                Ok(Cw20HookMsg::Escrow { time }) =>withdraw_from_pool_for_earn (
+                    deps,
+                    env,
+                    Addr::unchecked(cw20_msg.sender),
+                ),
+                Err(err) => Err(ContractError::Std(err)),
+            }
+        }
+
+
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
