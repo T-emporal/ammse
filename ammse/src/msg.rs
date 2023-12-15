@@ -13,8 +13,8 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    //Increment {},
-    //Reset { count: i32 },
+    Increment {},
+    Reset { count: i32 },
     //AddToEscrow { amount : Coin }, 
     //AddCollateral { amount : Coin},
     ReceiveForCollateral(Cw20ReceiveMsg),

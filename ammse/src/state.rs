@@ -11,6 +11,7 @@ pub static LENDERS: Item<LenderInfo> = Item::new("lenders:");
 pub static BORROWERS: Item<BorrowerInfo> = Item::new("borrowers:");
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const EARNINGS: Item<Earnings> = Item::new("earnings");
+pub const STATE: Item<State> = Item::new("state");
 // Represents the collective vault where all tokens are pooled together
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq,  Eq, JsonSchema)]
 pub struct Vault {
@@ -82,4 +83,10 @@ pub struct Earnings {
     pub amount_supplied: Uint128,  
     pub last_updated: u64,    
     
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct State {
+    pub count: i32,
+    pub owner: Addr,
 }
