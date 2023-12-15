@@ -44,15 +44,15 @@ pub fn execute(
         ExecuteMsg::EarnToPool(msg) =>earn_to_pool(deps, _env, info, msg),
         ExecuteMsg::Increment {} => execute::increment(deps),
         ExecuteMsg::Reset { count } => execute::reset(deps, info, count),
-        
+        ExecuteMsg::LendToPoolV2 {lender, amount, duration } => execute::lend_to_poolV2(deps, _env, lender, amount, duration),
     }
 }
 
 pub mod execute {
-    use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, from_binary, Addr};
+    use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, from_binary, Addr, Uint128};
     use cw20::Cw20ReceiveMsg;
 
-    use crate::{ContractError, msg::Cw20HookMsg, execute::{execute_escrow, lend_to_pool, borrow_from_pool, earn_tokens_into_pool, withdraw_from_pool_for_earn}, state::STATE};
+    use crate::{ContractError, msg::Cw20HookMsg, execute::{execute_escrow, lend_to_pool, borrow_from_pool, earn_tokens_into_pool, withdraw_from_pool_for_earn}, state::{STATE, VAULT, Vault, LenderInfo, LENDERS}};
 
     pub fn increment(deps: DepsMut) -> Result<Response, ContractError> {
         STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
@@ -73,6 +73,33 @@ pub mod execute {
         })?;
         Ok(Response::new().add_attribute("action", "reset"))
     }
+
+    pub fn lend_to_poolV2(
+        deps: DepsMut,
+        env: Env,
+        lender: Addr,
+        amount: Uint128,
+        duration: u64
+    ) -> Result<Response, ContractError> {
+        let mut vault = match VAULT.load(deps.storage) {
+            Ok(v) => v,
+            Err(_) => Vault::default(), // Use the default if not present in storage
+        };
+        
+        vault.total_tokens += amount;
+        VAULT.save(deps.storage, &vault)?;
+    
+        let lender_info = LenderInfo {
+            lender: lender.clone(),
+            amount_lent: amount,
+            maturity_date: env.block.time.seconds() + duration,
+        };
+        LENDERS.save(deps.storage, &lender_info)?;
+    
+        Ok(Response::default().add_attribute("action", "lend"))
+    }
+
+
 
         pub fn receive_cw20(
             deps: DepsMut,

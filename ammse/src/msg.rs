@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Coin, Uint128, Decimal};
+use cosmwasm_std::{Coin, Uint128, Decimal, Addr};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use cw20::Cw20ReceiveMsg;
@@ -22,6 +22,7 @@ pub enum ExecuteMsg {
     BorrowFromPool ( Cw20ReceiveMsg ),
     LendToPool(Cw20ReceiveMsg),
     EarnToPool(Cw20ReceiveMsg),
+    LendToPoolV2{lender:Addr, amount: Uint128, duration:u64 },
 }
 
 #[cw_serde]
