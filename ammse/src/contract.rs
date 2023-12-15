@@ -97,14 +97,14 @@ pub mod execute {
             deps: DepsMut,
             env: Env,
             info: MessageInfo,
-            cw20_msg: Cw20ReceiveMsg,
+            msg: Cw20ReceiveMsg,
         ) -> Result<Response, ContractError> {
-            match from_binary(&cw20_msg.msg) {
+            match from_binary(&msg.msg) {
                 Ok(Cw20HookMsg::Escrow { time }) => lend_to_pool(
                     deps,
                     env,
-                    Addr::unchecked(cw20_msg.sender),
-                    cw20_msg.amount,
+                    Addr::unchecked(msg.sender),
+                    msg.amount,
                     time,
                 ),
                 Err(err) => Err(ContractError::Std(err)),
